@@ -1,0 +1,13 @@
+begin;
+select plan(7);
+select has_table('public','weddings','weddings exists');
+select has_table('public','wedding_media','media exists');
+select col_is_pk('public','weddings','id','weddings use UUID primary key');
+select policies_are('public','weddings',array['weddings_admin_delete','weddings_admin_insert','weddings_admin_select','weddings_admin_update'],'weddings has explicit admin policies');
+set local role anon;
+select ok(public.get_public_wedding_by_slug('missing') is null,'missing slug discloses nothing');
+reset role;
+select is((select gallery_limit from public.package_entitlements where package='essential'),24,'essential gallery cap');
+select is((select gallery_limit from public.package_entitlements where package='bespoke'),200,'bespoke gallery cap');
+select * from finish();
+rollback;

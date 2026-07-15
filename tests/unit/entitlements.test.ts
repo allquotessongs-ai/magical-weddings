@@ -1,0 +1,3 @@
+import { describe, expect, it } from "vitest";
+import { getEntitlements, sectionEntitlement } from "@/features/entitlements";
+describe("package entitlements",()=>{it("enforces gallery caps",()=>{expect(getEntitlements("essential").galleryLimit).toBe(24);expect(getEntitlements("signature").galleryLimit).toBe(75);expect(getEntitlements("bespoke").galleryLimit).toBe(200)});it("gates premium sections centrally",()=>{expect(sectionEntitlement("faq",getEntitlements("essential"))).toBe(false);expect(sectionEntitlement("faq",getEntitlements("signature"))).toBe(true);expect(sectionEntitlement("timeline",getEntitlements("signature"))).toBe(false);expect(sectionEntitlement("timeline",getEntitlements("bespoke"))).toBe(true)})});
