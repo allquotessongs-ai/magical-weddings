@@ -42,7 +42,7 @@ export const demoWedding: WeddingSite = {
   ],
   gallery: [], timeline: [],
   sections: SECTION_KEYS.map((key, position) => ({ key, position, enabled: !["timeline"].includes(key) })),
-  media: {},
+  media: {}, mediaFocalPoints: {},
   theme: { id: "tropical-elegance", primary: "#174c3c", secondary: "#fff8ec", accent: "#d66b4d", headingFont: "DM Serif Display", bodyFont: "Manrope", backgroundStyle: "soft", buttonStyle: "pill", radius: "round", motion: "subtle", decoration: "botanical" },
   entitlements: getEntitlements("signature"),
 };

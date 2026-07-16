@@ -261,6 +261,14 @@ end; $$;
 revoke all on function public.create_wedding_with_defaults(text,text,text,text,public.wedding_package,timestamptz,text,text,text) from public;
 grant execute on function public.create_wedding_with_defaults(text,text,text,text,public.wedding_package,timestamptz,text,text,text) to authenticated;
 
+-- PostgREST roles need table privileges before RLS policies can be evaluated.
+-- Anonymous access remains revoked below; authenticated access is still limited
+-- by the super-admin policies defined above.
+grant usage on schema public to authenticated, service_role;
+grant usage on schema private to authenticated, service_role;
+grant select, insert, update, delete on all tables in schema public to authenticated, service_role;
+grant usage, select, update on all sequences in schema public to authenticated, service_role;
+
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('wedding-media', 'wedding-media', false, 15728640, array['image/jpeg','image/png','image/webp','image/avif','audio/mpeg','audio/mp4','audio/ogg','audio/x-m4a'])
 on conflict (id) do update set public=excluded.public, file_size_limit=excluded.file_size_limit, allowed_mime_types=excluded.allowed_mime_types;

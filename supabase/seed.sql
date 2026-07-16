@@ -20,3 +20,8 @@ values
 ('00000000-0000-0000-0000-000000000001','ceremony','Hope Botanical Gardens','Old Hope Road','Saint Andrew','2027-02-20 20:00:00+00','https://maps.google.com'),
 ('00000000-0000-0000-0000-000000000001','reception','The Terrace','Kingston','Kingston','2027-02-20 22:00:00+00','https://maps.google.com')
 on conflict (wedding_id,event_type) do nothing;
+
+-- Capture the completed seed content as the public version after all child rows exist.
+update public.weddings
+set published_at = timezone('utc', now())
+where id = '00000000-0000-0000-0000-000000000001';

@@ -4,6 +4,10 @@ import { RESERVED_SLUGS, SECTION_KEYS } from "@/lib/config/brand";
 export const packageSchema = z.enum(["essential", "signature", "bespoke"]);
 export const statusSchema = z.enum(["draft", "scheduled", "published", "archived"]);
 export const themeSchema = z.enum(["timeless-romance", "tropical-elegance", "modern-minimal"]);
+export const postgresUuidSchema = z.string().regex(
+  /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+  "Invalid UUID",
+);
 
 export const slugSchema = z.string().trim().toLowerCase()
   .min(3, "Use at least 3 characters")
@@ -50,9 +54,10 @@ export const sectionOrderSchema = z.array(z.object({
 })).length(SECTION_KEYS.length);
 
 export const mediaUploadSchema = z.object({
-  weddingId: z.string().uuid(), purpose: z.enum(["hero", "portrait", "gallery", "wedding_party", "texture", "music"]),
+  weddingId: postgresUuidSchema, purpose: z.enum(["hero", "portrait", "gallery", "wedding_party", "texture", "music"]),
   fileName: z.string().min(1).max(180), mimeType: z.string(), size: z.number().int().positive(),
   altText: z.string().trim().max(240).default(""),
+  focalX: z.number().min(0).max(100).default(50), focalY: z.number().min(0).max(100).default(22),
 }).superRefine((value, ctx) => {
   const imageTypes = ["image/jpeg", "image/png", "image/webp", "image/avif"];
   const audioTypes = ["audio/mpeg", "audio/mp4", "audio/ogg", "audio/x-m4a"];

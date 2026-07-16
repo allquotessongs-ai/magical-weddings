@@ -22,6 +22,7 @@ export type WeddingSite = {
   timeline: Array<{ id: string; occurredOn: string; title: string; description?: string }>;
   sections: Array<{ key: string; enabled: boolean; position: number }>;
   media: Partial<Record<"hero" | "portrait" | "texture" | "music", string>>;
+  mediaFocalPoints: Partial<Record<"hero" | "portrait" | "texture", { x: number; y: number }>>;
   theme: { id: ThemeId; primary: string; secondary: string; accent: string; headingFont: string; bodyFont: string; backgroundStyle: string; buttonStyle: string; radius: string; motion: string; decoration: string };
   entitlements: Entitlements;
 };

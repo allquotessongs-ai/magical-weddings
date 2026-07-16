@@ -20,9 +20,15 @@ export function mapPublicPayload(payload: unknown): WeddingSite | null {
   const packageName = text(wedding.package, "essential") as PackageName;
   const mediaRows = rows(data.media);
   const mediaByPurpose: WeddingSite["media"] = {};
+  const focalByPurpose: WeddingSite["mediaFocalPoints"] = {};
   for (const media of mediaRows) {
     const purpose = text(media.purpose) as keyof WeddingSite["media"];
-    if (["hero", "portrait", "texture", "music"].includes(purpose)) mediaByPurpose[purpose] = text(media.id);
+    if (["hero", "portrait", "texture", "music"].includes(purpose)) {
+      mediaByPurpose[purpose] = text(media.id);
+      const metadata = media.metadata && typeof media.metadata === "object" ? media.metadata as Row : {};
+      const x = Number(metadata.focalX); const y = Number(metadata.focalY);
+      if (purpose !== "music" && Number.isFinite(x) && Number.isFinite(y)) focalByPurpose[purpose] = { x, y };
+    }
   }
   return {
     id: text(wedding.id), slug: text(wedding.slug), partnerOneName: text(wedding.partner_one_name), partnerTwoName: text(wedding.partner_two_name),
@@ -42,7 +48,7 @@ export function mapPublicPayload(payload: unknown): WeddingSite | null {
     gallery: rows(data.gallery).map((item) => ({ id: text(item.id), mediaId: text(item.media_id), caption: text(item.caption), altText: text(item.alt_text) })),
     timeline: rows(data.timeline).map((item) => ({ id: text(item.id), occurredOn: text(item.occurred_on), title: text(item.title), description: text(item.description) })),
     sections: rows(data.sections).map((item) => ({ key: text(item.section_key), enabled: Boolean(item.enabled), position: Number(item.position) })),
-    media: mediaByPurpose,
+    media: mediaByPurpose, mediaFocalPoints: focalByPurpose,
     theme: { id: text(theme.theme_id, "timeless-romance") as ThemeId, primary: text(theme.primary_color, "#5f2438"), secondary: text(theme.secondary_color, "#fffaf3"), accent: text(theme.accent_color, "#bd8c54"), headingFont: text(theme.heading_font, "Cormorant Garamond"), bodyFont: text(theme.body_font, "Manrope"), backgroundStyle: text(theme.background_style, "paper"), buttonStyle: text(theme.button_style, "solid"), radius: text(theme.border_radius, "soft"), motion: text(theme.animation_intensity, "subtle"), decoration: text(theme.decorative_elements, "fine-lines") },
     entitlements: getEntitlements(packageName),
   };
@@ -93,18 +99,20 @@ export async function getAdminWedding(id: string) {
 
 export async function getPreviewWedding(id: string) {
   const raw = await getAdminWedding(id) as unknown as Record<string, unknown>;
+  const activeMedia = rows(raw.wedding_media).filter((item) => item.active !== false);
+  const activeMediaIds = new Set(activeMedia.map((item) => text(item.id)));
   return mapPublicPayload({
     wedding: raw,
     content: Array.isArray(raw.wedding_content) ? raw.wedding_content[0] : raw.wedding_content,
     theme: Array.isArray(raw.wedding_theme_settings) ? raw.wedding_theme_settings[0] : raw.wedding_theme_settings,
     events: raw.wedding_events,
     sections: raw.wedding_sections,
-    media: raw.wedding_media,
+    media: activeMedia,
     schedule: raw.wedding_schedule_items,
     menu: raw.wedding_menu_items,
     faqs: raw.wedding_faqs,
     party: raw.wedding_party_members,
     timeline: raw.wedding_timeline_items,
-    gallery: raw.wedding_gallery,
+    gallery: rows(raw.wedding_gallery).filter((item) => activeMediaIds.has(text(item.media_id))),
   });
 }

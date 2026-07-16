@@ -16,12 +16,16 @@ const toIso = (date: string, time: string) => {
   return value.toISOString();
 };
 
-async function refreshWedding(id: string) {
+async function refreshWedding(id: string, markChanged = true) {
   const supabase = await createServerSupabaseClient();
+  if (markChanged) {
+    const { error } = await supabase.from("weddings").update({ has_unpublished_changes: true }).eq("id", id);
+    if (error) throw new Error(error.message);
+  }
   const { data } = await supabase.from("weddings").select("slug").eq("id", id).maybeSingle();
   revalidatePath("/admin");
   revalidatePath("/admin/weddings");
-  if (data?.slug) revalidatePath(`/${data.slug}`);
+  if (!markChanged && data?.slug) revalidatePath(`/${data.slug}`);
 }
 
 export async function createWedding(form: FormData) {
@@ -56,7 +60,7 @@ export async function saveEvents(form: FormData) {
   for (const type of ["ceremony", "reception"] as const) {
     const venue = str(form, `${type}Venue`);
     if (!venue) continue;
-    const { error } = await supabase.from("wedding_events").upsert({ wedding_id: id, event_type: type, venue_name: venue, address: str(form, `${type}Address`), parish: str(form, `${type}Parish`), starts_at: toIso(str(form, `${type}Date`), str(form, `${type}Time`)), maps_url: str(form, "mapsUrl") || null, transportation_notes: str(form, "transportationNotes") || null, parking_notes: str(form, "parkingNotes") || null }, { onConflict: "wedding_id,event_type" });
+    const { error } = await supabase.from("wedding_events").upsert({ wedding_id: id, event_type: type, venue_name: venue, address: str(form, `${type}Address`), parish: str(form, `${type}Parish`), starts_at: toIso(str(form, `${type}Date`), str(form, `${type}Time`)), maps_url: str(form, `${type}MapsUrl`) || null, transportation_notes: str(form, "transportationNotes") || null, parking_notes: str(form, "parkingNotes") || null }, { onConflict: "wedding_id,event_type" });
     if (error) throw new Error(error.message);
   }
   await refreshWedding(id); redirect(`/admin/weddings/${id}/edit/content`);
@@ -123,18 +127,17 @@ export async function changeWeddingStatus(form: FormData) {
   const action = str(form, "statusAction");
   const supabase = await createServerSupabaseClient();
   if (action === "publish") {
-    const [{ data: wedding }, { data: events }, { data: media }] = await Promise.all([
+    const [{ data: wedding }, { data: events }] = await Promise.all([
       supabase.from("weddings").select("display_names,slug,wedding_at").eq("id", id).single(),
       supabase.from("wedding_events").select("id").eq("wedding_id", id).eq("event_type", "ceremony"),
-      supabase.from("wedding_media").select("id").eq("wedding_id", id).eq("purpose", "hero"),
     ]);
-    if (!wedding || !events?.length || !media?.length) redirect(`/admin/weddings/${id}/edit/publish?error=${encodeURIComponent("Add a hero image and ceremony details before publishing")}`);
-    await supabase.from("weddings").update({ status: "published", published_at: new Date().toISOString(), publish_at: null }).eq("id", id);
+    if (!wedding || !events?.length) redirect(`/admin/weddings/${id}/edit/publish?error=${encodeURIComponent("Add ceremony details before publishing")}`);
+    await supabase.from("weddings").update({ status: "published", published_at: new Date().toISOString(), publish_at: null, has_unpublished_changes: false }).eq("id", id);
   } else if (action === "schedule") {
     const scheduleAt = new Date(str(form, "publishAt"));
     if (Number.isNaN(scheduleAt.getTime()) || scheduleAt.getTime() <= Date.now()) throw new Error("Choose a future publishing time.");
-    await supabase.from("weddings").update({ status: "scheduled", publish_at: scheduleAt.toISOString() }).eq("id", id);
+    await supabase.from("weddings").update({ status: "scheduled", publish_at: scheduleAt.toISOString(), has_unpublished_changes: false }).eq("id", id);
   } else if (action === "archive") await supabase.from("weddings").update({ status: "archived" }).eq("id", id);
   else await supabase.from("weddings").update({ status: "draft", publish_at: null }).eq("id", id);
-  await refreshWedding(id); redirect(`/admin/weddings/${id}/edit/publish`);
+  await refreshWedding(id, false); redirect(`/admin/weddings/${id}/edit/publish`);
 }
