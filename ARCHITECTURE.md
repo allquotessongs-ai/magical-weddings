@@ -14,7 +14,13 @@ The public RPC checks effective publication status and strips private wedding co
 
 ## Rendering and themes
 
-`WeddingSiteRenderer` is the single public renderer. Section records control order and visibility; the entitlement service removes unavailable package sections. The three themes change layout, typography, palette, spacing, and decoration through validated design tokens and shared section components.
+`WeddingSite` is the normalized, presentation-independent contract used by public pages and authenticated previews. Section records are filtered once for enablement, content, order, and entitlements before presentation. The fixed opening invitation is the only ordering exception; when it is disabled the page opens immediately, while the closing section retains its stored position.
+
+The typed theme registry resolves the stable IDs `timeless-romance`, `tropical-elegance`, `modern-minimal`, and `enchanted-garden` to separate page shells and hero compositions. Timeless Romance is the fallback for missing or invalid values. Theme components share behavior and safe content primitives but own their navigation, page composition, image treatment, section layout, ornamentation, and footer design.
+
+Theme settings resolve as curated defaults, then per-wedding/per-theme overrides, then contrast safeguards. Essential weddings use curated defaults; Signature and Bespoke can store independent overrides for every theme. Versioned JSON overrides are the current storage contract. Legacy scalar columns remain temporarily so previously captured publication snapshots continue rendering until a wedding is republished.
+
+The Design step renders the current normalized draft directly in a local live preview. Switching themes or viewports does not write to Supabase; Apply & Save validates the selected theme and atomically persists its override entry. Saved draft changes continue to be isolated from the public publication snapshot.
 
 Authenticated routes are dynamic and private/no-store. Public pages revalidate every five minutes; administrative mutations revalidate affected route groups. Music starts only after the opening interaction and retains labelled play, mute, and volume controls.
 

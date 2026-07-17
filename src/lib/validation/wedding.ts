@@ -1,9 +1,11 @@
 import { z } from "zod";
 import { RESERVED_SLUGS, SECTION_KEYS } from "@/lib/config/brand";
+import { THEME_IDS } from "@/features/themes/types";
+import { themeTokenSchema, validateThemeContrast } from "@/features/themes/registry";
 
 export const packageSchema = z.enum(["essential", "signature", "bespoke"]);
 export const statusSchema = z.enum(["draft", "scheduled", "published", "archived"]);
-export const themeSchema = z.enum(["timeless-romance", "tropical-elegance", "modern-minimal"]);
+export const themeSchema = z.enum(THEME_IDS);
 export const postgresUuidSchema = z.string().regex(
   /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
   "Invalid UUID",
@@ -35,23 +37,26 @@ export const eventSchema = z.object({
   transportationNotes: z.string().max(2000), parkingNotes: z.string().max(2000),
 });
 
-export const themeSettingsSchema = z.object({
-  themeId: themeSchema,
-  primaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  secondaryColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  accentColor: z.string().regex(/^#[0-9a-fA-F]{6}$/),
-  headingFont: z.enum(["Cormorant Garamond", "Playfair Display", "DM Serif Display"]),
-  bodyFont: z.enum(["Manrope", "Inter", "Lora"]),
-  backgroundStyle: z.enum(["plain", "paper", "soft", "editorial"]),
-  buttonStyle: z.enum(["solid", "outline", "pill"]),
-  radius: z.enum(["none", "soft", "round"]),
-  motion: z.enum(["none", "subtle", "expressive"]),
-  decoration: z.enum(["none", "fine-lines", "botanical", "geometric"]),
+export const themeSettingsSchema = z.object({ themeId: themeSchema, ...themeTokenSchema.shape }).superRefine((value, ctx) => {
+  const message = validateThemeContrast(value);
+  if (message) ctx.addIssue({ code: "custom", path: ["text"], message });
 });
 
 export const sectionOrderSchema = z.array(z.object({
   key: z.enum(SECTION_KEYS), enabled: z.boolean(), position: z.number().int().min(0),
 })).length(SECTION_KEYS.length);
+
+const timelineDateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a date for every timeline moment").refine((value) => {
+  const [year, month, day] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day;
+}, "Choose a valid date for every timeline moment");
+
+export const timelineItemsSchema = z.array(z.object({
+  occurredOn: timelineDateSchema,
+  title: z.string().trim().min(1, "Add a title for every timeline moment").max(160),
+  description: z.string().trim().max(2000),
+})).max(50, "A timeline can contain up to 50 moments");
 
 export const mediaUploadSchema = z.object({
   weddingId: postgresUuidSchema, purpose: z.enum(["hero", "portrait", "gallery", "wedding_party", "texture", "music"]),

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { mediaUploadSchema, slugSchema } from "@/lib/validation/wedding";
+import { mediaUploadSchema, slugSchema, timelineItemsSchema } from "@/lib/validation/wedding";
 
 describe("wedding validation", () => {
   it("normalizes a safe slug", () => expect(slugSchema.parse(" Annette-and-Clive ")).toBe("annette-and-clive"));
@@ -11,5 +11,9 @@ describe("wedding validation", () => {
   it("accepts PostgreSQL UUIDs used by seeded fixtures", () => {
     const input=mediaUploadSchema.parse({weddingId:"00000000-0000-0000-0000-000000000001",purpose:"hero",fileName:"hero.jpg",mimeType:"image/jpeg",size:1000,altText:"A couple"});
     expect(input.weddingId).toBe("00000000-0000-0000-0000-000000000001");
+  });
+  it("validates structured relationship timeline moments", () => {
+    expect(timelineItemsSchema.parse([{occurredOn:"2024-02-14",title:"The proposal",description:"A beautiful question."}])).toHaveLength(1);
+    expect(()=>timelineItemsSchema.parse([{occurredOn:"2024-02-31",title:"",description:""}])).toThrow();
   });
 });

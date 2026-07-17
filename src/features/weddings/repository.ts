@@ -5,7 +5,9 @@ import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { demoWedding } from "./demo";
 import { getEntitlements } from "@/features/entitlements";
-import type { PackageName, ThemeId, WeddingSite, WeddingStatus, WeddingSummary } from "./types";
+import { getThemeDefinition, parseOverrideMap, resolveTheme, themeFromLegacy } from "@/features/themes/registry";
+import type { ThemeOverrideMap } from "@/features/themes/types";
+import type { PackageName, WeddingSite, WeddingStatus, WeddingSummary } from "./types";
 
 type Row = Record<string, unknown>;
 const rows = (value: unknown) => Array.isArray(value) ? value as Row[] : [];
@@ -18,6 +20,7 @@ export function mapPublicPayload(payload: unknown): WeddingSite | null {
   const content = (data.content ?? {}) as Row;
   const theme = (data.theme ?? {}) as Row;
   const packageName = text(wedding.package, "essential") as PackageName;
+  const entitlements = getEntitlements(packageName);
   const mediaRows = rows(data.media);
   const mediaByPurpose: WeddingSite["media"] = {};
   const focalByPurpose: WeddingSite["mediaFocalPoints"] = {};
@@ -49,8 +52,15 @@ export function mapPublicPayload(payload: unknown): WeddingSite | null {
     timeline: rows(data.timeline).map((item) => ({ id: text(item.id), occurredOn: text(item.occurred_on), title: text(item.title), description: text(item.description) })),
     sections: rows(data.sections).map((item) => ({ key: text(item.section_key), enabled: Boolean(item.enabled), position: Number(item.position) })),
     media: mediaByPurpose, mediaFocalPoints: focalByPurpose,
-    theme: { id: text(theme.theme_id, "timeless-romance") as ThemeId, primary: text(theme.primary_color, "#5f2438"), secondary: text(theme.secondary_color, "#fffaf3"), accent: text(theme.accent_color, "#bd8c54"), headingFont: text(theme.heading_font, "Cormorant Garamond"), bodyFont: text(theme.body_font, "Manrope"), backgroundStyle: text(theme.background_style, "paper"), buttonStyle: text(theme.button_style, "solid"), radius: text(theme.border_radius, "soft"), motion: text(theme.animation_intensity, "subtle"), decoration: text(theme.decorative_elements, "fine-lines") },
-    entitlements: getEntitlements(packageName),
+    theme: (() => {
+      const definition = getThemeDefinition(theme.theme_id);
+      const versioned = Number(theme.settings_version) === 2;
+      const overrideMap: ThemeOverrideMap = versioned
+        ? parseOverrideMap(theme.theme_overrides)
+        : { [definition.id]: themeFromLegacy(theme) };
+      return resolveTheme(definition.id, overrideMap, entitlements.themeCustomization);
+    })(),
+    entitlements,
   };
 }
 
@@ -73,7 +83,7 @@ export async function getWeddingSummaries(query = "", status = "all", page = 1) 
   const items: WeddingSummary[] = (data ?? []).map((row) => {
     const themeJoin = row.wedding_theme_settings as unknown as { theme_id?: string } | Array<{ theme_id?: string }> | null;
     const themeId = Array.isArray(themeJoin) ? themeJoin[0]?.theme_id : themeJoin?.theme_id;
-    return { id: row.id, displayNames: row.display_names, weddingAt: row.wedding_at, slug: row.slug, package: row.package as PackageName, status: row.status as WeddingStatus, themeId: (themeId ?? "timeless-romance") as ThemeId, customDomain: row.custom_domain, createdAt: row.created_at, updatedAt: row.updated_at };
+    return { id: row.id, displayNames: row.display_names, weddingAt: row.wedding_at, slug: row.slug, package: row.package as PackageName, status: row.status as WeddingStatus, themeId: getThemeDefinition(themeId).id, customDomain: row.custom_domain, createdAt: row.created_at, updatedAt: row.updated_at };
   });
   return { items, count: count ?? 0, page };
 }

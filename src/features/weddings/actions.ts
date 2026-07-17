@@ -6,7 +6,9 @@ import { assertSuperAdmin } from "@/lib/security/auth";
 import { createServerSupabaseClient } from "@/lib/supabase/server";
 import { SECTION_KEYS } from "@/lib/config/brand";
 import { getEntitlements } from "@/features/entitlements";
-import { slugSchema, themeSettingsSchema } from "@/lib/validation/wedding";
+import { parseOverrideMap } from "@/features/themes/registry";
+import type { ThemeOverrideMap, ThemeOverrides } from "@/features/themes/types";
+import { slugSchema, themeSettingsSchema, timelineItemsSchema } from "@/lib/validation/wedding";
 import type { PackageName } from "./types";
 
 const str = (form: FormData, key: string) => String(form.get(key) ?? "").trim();
@@ -70,6 +72,18 @@ export async function saveContent(form: FormData) {
   await assertSuperAdmin();
   const id = str(form, "weddingId");
   const supabase = await createServerSupabaseClient();
+  const { data: wedding } = await supabase.from("weddings").select("package").eq("id", id).single();
+  if (!wedding) throw new Error("Wedding not found");
+  const entitlements = getEntitlements(wedding.package as PackageName);
+  let timelineValues: Array<{ occurredOn: string; title: string; description: string }> = [];
+  if (entitlements.timeline) {
+    let timelineInput: unknown;
+    try { timelineInput = JSON.parse(str(form, "timelineItems") || "[]"); }
+    catch { redirect(`/admin/weddings/${id}/edit/content?error=${encodeURIComponent("The relationship timeline could not be read. Please review its entries.")}`); }
+    const result = timelineItemsSchema.safeParse(timelineInput);
+    if (!result.success) redirect(`/admin/weddings/${id}/edit/content?error=${encodeURIComponent(result.error.issues[0]?.message ?? "Review the relationship timeline")}`);
+    timelineValues = result.data;
+  }
   const { error } = await supabase.from("wedding_content").upsert({ wedding_id: id, introduction: str(form, "introduction"), couple_story: str(form, "coupleStory"), engagement_story: str(form, "engagementStory"), hashtag: str(form, "hashtag"), dress_code: str(form, "dressCode"), accommodation: str(form, "accommodation"), registry_information: str(form, "registry"), contact_information: str(form, "contactInformation"), closing_message: str(form, "closingMessage"), rsvp_mode: str(form, "rsvpMode") || null, rsvp_target: str(form, "rsvpTarget") || null }, { onConflict: "wedding_id" });
   if (error) throw new Error(error.message);
   const weddingDate = str(form, "weddingDate") || new Date().toISOString().slice(0, 10);
@@ -83,22 +97,34 @@ export async function saveContent(form: FormData) {
   await replace("wedding_menu_items", lines("menuItems").map(([category,name,description],sort_order)=>({wedding_id:id,category,name,description:description||null,sort_order})));
   await replace("wedding_faqs", lines("faqItems").map(([question,answer],sort_order)=>({wedding_id:id,question,answer,sort_order})));
   await replace("wedding_party_members", lines("partyItems").map(([name,role,biography],sort_order)=>({wedding_id:id,name,role,biography:biography||null,sort_order})));
-  await replace("wedding_timeline_items", lines("timelineItems").map(([occurred_on,title,description],sort_order)=>({wedding_id:id,occurred_on,title,description:description||null,sort_order})));
+  if (entitlements.timeline) await replace("wedding_timeline_items", timelineValues.map((item,sort_order)=>({wedding_id:id,occurred_on:item.occurredOn,title:item.title,description:item.description||null,sort_order})));
   await refreshWedding(id); redirect(`/admin/weddings/${id}/edit/design`);
 }
 
 export async function saveDesign(form: FormData) {
   await assertSuperAdmin();
   const id = str(form, "weddingId");
-  const settings = themeSettingsSchema.parse({ themeId: str(form, "themeId"), primaryColor: str(form, "primaryColor"), secondaryColor: str(form, "secondaryColor"), accentColor: str(form, "accentColor"), headingFont: str(form, "headingFont"), bodyFont: str(form, "bodyFont"), backgroundStyle: str(form, "backgroundStyle"), buttonStyle: str(form, "buttonStyle"), radius: str(form, "radius"), motion: str(form, "motion"), decoration: str(form, "decoration") });
+  const settings = themeSettingsSchema.parse({
+    themeId: str(form, "themeId"), primary: str(form, "primary"), secondary: str(form, "secondary"), accent: str(form, "accent"),
+    background: str(form, "background"), text: str(form, "text"), headingFont: str(form, "headingFont"), bodyFont: str(form, "bodyFont"),
+    decorativeFont: str(form, "decorativeFont"), backgroundStyle: str(form, "backgroundStyle"), buttonStyle: str(form, "buttonStyle"),
+    radius: str(form, "radius"), shadow: str(form, "shadow"), sectionSpacing: str(form, "sectionSpacing"), motion: str(form, "motion"),
+    imageTreatment: str(form, "imageTreatment"), decoration: str(form, "decoration"),
+  });
   const supabase = await createServerSupabaseClient();
-  const { data: wedding } = await supabase.from("weddings").select("package").eq("id", id).single();
+  const { data: wedding } = await supabase.from("weddings").select("package,wedding_theme_settings(theme_overrides)").eq("id", id).single();
   if (!wedding) throw new Error("Wedding not found");
   const allowed = getEntitlements(wedding.package as PackageName).themeCustomization;
-  const defaults = settings.themeId === "tropical-elegance" ? ["#174c3c", "#fff8ec", "#d66b4d"] : settings.themeId === "modern-minimal" ? ["#242424", "#f4f1ea", "#a57450"] : ["#5f2438", "#fffaf3", "#bd8c54"];
-  const { error } = await supabase.from("wedding_theme_settings").upsert({ wedding_id: id, theme_id: settings.themeId, primary_color: allowed ? settings.primaryColor : defaults[0], secondary_color: allowed ? settings.secondaryColor : defaults[1], accent_color: allowed ? settings.accentColor : defaults[2], heading_font: allowed ? settings.headingFont : "Cormorant Garamond", body_font: allowed ? settings.bodyFont : "Manrope", background_style: allowed ? settings.backgroundStyle : "paper", button_style: allowed ? settings.buttonStyle : "solid", border_radius: allowed ? settings.radius : "soft", animation_intensity: allowed ? settings.motion : "subtle", decorative_elements: allowed ? settings.decoration : "fine-lines" }, { onConflict: "wedding_id" });
+  const joined = wedding.wedding_theme_settings as unknown as { theme_overrides?: unknown } | Array<{ theme_overrides?: unknown }> | null;
+  const saved = Array.isArray(joined) ? joined[0] : joined;
+  const overrides: ThemeOverrideMap = parseOverrideMap(saved?.theme_overrides);
+  if (allowed) {
+    const themeOverrides = Object.fromEntries(Object.entries(settings).filter(([key]) => key !== "themeId")) as ThemeOverrides;
+    overrides[settings.themeId] = themeOverrides;
+  }
+  const { error } = await supabase.from("wedding_theme_settings").upsert({ wedding_id: id, theme_id: settings.themeId, settings_version: 2, theme_overrides: overrides }, { onConflict: "wedding_id" });
   if (error) throw new Error(error.message);
-  await refreshWedding(id); redirect(`/admin/weddings/${id}/edit/media`);
+  await refreshWedding(id); redirect(`/admin/weddings/${id}/edit/design?saved=1`);
 }
 
 export async function saveSections(form: FormData) {

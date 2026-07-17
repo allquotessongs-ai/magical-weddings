@@ -7,8 +7,8 @@ on conflict (id) do nothing;
 insert into public.wedding_content (wedding_id, introduction, couple_story, engagement_story, hashtag, dress_code, accommodation, registry_information, contact_information, closing_message, rsvp_mode, rsvp_target)
 values ('00000000-0000-0000-0000-000000000001', 'With joyful hearts, we invite you to share in the beginning of our forever.', 'A chance meeting in Kingston became long conversations, Sunday drives, and a love that felt like home.', 'At sunset above the Blue Mountains, Clive asked one beautiful question.', '#AnnetteAndClive', 'Island formal', 'A preferred room block is available near the reception.', 'Your presence is our greatest gift.', 'Questions? Contact our wedding team.', 'We cannot wait to celebrate beneath the Jamaican sky with you.', 'external_url', 'https://example.com/rsvp') on conflict (wedding_id) do nothing;
 
-insert into public.wedding_theme_settings (wedding_id, theme_id, primary_color, secondary_color, accent_color, heading_font, body_font, background_style, button_style, border_radius, animation_intensity, decorative_elements)
-values ('00000000-0000-0000-0000-000000000001', 'tropical-elegance', '#174c3c', '#fff8ec', '#d66b4d', 'DM Serif Display', 'Manrope', 'soft', 'pill', 'round', 'subtle', 'botanical') on conflict (wedding_id) do nothing;
+insert into public.wedding_theme_settings (wedding_id, theme_id, primary_color, secondary_color, accent_color, heading_font, body_font, background_style, button_style, border_radius, animation_intensity, decorative_elements, settings_version, theme_overrides)
+values ('00000000-0000-0000-0000-000000000001', 'tropical-elegance', '#174c3c', '#fff8ec', '#c75d46', 'DM Serif Display', 'Manrope', 'soft', 'pill', 'round', 'expressive', 'botanical', 2, '{}'::jsonb) on conflict (wedding_id) do nothing;
 
 insert into public.wedding_sections (wedding_id, section_key, enabled, position)
 select '00000000-0000-0000-0000-000000000001', key, key <> 'timeline', ordinality - 1

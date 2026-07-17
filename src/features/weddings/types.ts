@@ -1,8 +1,9 @@
 import type { Entitlements } from "@/features/entitlements";
+import type { ResolvedTheme, ThemeId } from "@/features/themes/types";
 
 export type PackageName = "essential" | "signature" | "bespoke";
 export type WeddingStatus = "draft" | "scheduled" | "published" | "archived";
-export type ThemeId = "timeless-romance" | "tropical-elegance" | "modern-minimal";
+export type { ThemeId } from "@/features/themes/types";
 
 export type WeddingSite = {
   id: string; slug: string; partnerOneName: string; partnerTwoName: string; displayNames: string;
@@ -23,7 +24,7 @@ export type WeddingSite = {
   sections: Array<{ key: string; enabled: boolean; position: number }>;
   media: Partial<Record<"hero" | "portrait" | "texture" | "music", string>>;
   mediaFocalPoints: Partial<Record<"hero" | "portrait" | "texture", { x: number; y: number }>>;
-  theme: { id: ThemeId; primary: string; secondary: string; accent: string; headingFont: string; bodyFont: string; backgroundStyle: string; buttonStyle: string; radius: string; motion: string; decoration: string };
+  theme: ResolvedTheme;
   entitlements: Entitlements;
 };
 

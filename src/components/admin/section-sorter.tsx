@@ -8,11 +8,11 @@ import { GripVertical, LockKeyhole } from "lucide-react";
 import { SECTION_LABELS } from "@/lib/config/brand";
 import { Button } from "@/components/ui/button";
 
-type Item = { key: keyof typeof SECTION_LABELS; enabled: boolean; locked: boolean };
+type Item = { key: keyof typeof SECTION_LABELS; enabled: boolean; locked: boolean; lockedLabel?: string };
 
 function SortableRow({ item, onToggle }: { item: Item; onToggle: (key: string) => void }) {
   const { attributes,listeners,setNodeRef,transform,transition,isDragging }=useSortable({id:item.key});
-  return <div ref={setNodeRef} className={`sort-row ${isDragging?"dragging":""}`} style={{transform:CSS.Transform.toString(transform),transition}}><button type="button" className="drag-handle" aria-label={`Move ${SECTION_LABELS[item.key]}`} {...attributes} {...listeners}><GripVertical/></button><span>{SECTION_LABELS[item.key]}</span>{item.locked ? <small className="locked"><LockKeyhole/>Higher package</small> : <label className="switch"><input type="checkbox" name={`enabled:${item.key}`} checked={item.enabled} onChange={()=>onToggle(item.key)}/><span/> {item.enabled?"Shown":"Hidden"}</label>}</div>;
+  return <div ref={setNodeRef} className={`sort-row ${isDragging?"dragging":""}`} style={{transform:CSS.Transform.toString(transform),transition}}><button type="button" className="drag-handle" aria-label={`Move ${SECTION_LABELS[item.key]}`} {...attributes} {...listeners}><GripVertical/></button><span>{SECTION_LABELS[item.key]}</span>{item.locked ? <small className="locked"><LockKeyhole/>{item.lockedLabel ?? "Higher package"}</small> : <label className="switch"><input type="checkbox" name={`enabled:${item.key}`} checked={item.enabled} onChange={()=>onToggle(item.key)}/><span/> {item.enabled?"Shown":"Hidden"}</label>}</div>;
 }
 
 export function SectionSorter({ initial }: { initial: Item[] }) {

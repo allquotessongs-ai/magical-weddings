@@ -1,6 +1,7 @@
 import { getEntitlements } from "@/features/entitlements";
 import type { WeddingSite } from "./types";
 import { SECTION_KEYS } from "@/lib/config/brand";
+import { resolveTheme } from "@/features/themes/registry";
 
 export const demoWedding: WeddingSite = {
   id: "00000000-0000-0000-0000-000000000001", slug: "annetteandclive",
@@ -43,6 +44,6 @@ export const demoWedding: WeddingSite = {
   gallery: [], timeline: [],
   sections: SECTION_KEYS.map((key, position) => ({ key, position, enabled: !["timeline"].includes(key) })),
   media: {}, mediaFocalPoints: {},
-  theme: { id: "tropical-elegance", primary: "#174c3c", secondary: "#fff8ec", accent: "#d66b4d", headingFont: "DM Serif Display", bodyFont: "Manrope", backgroundStyle: "soft", buttonStyle: "pill", radius: "round", motion: "subtle", decoration: "botanical" },
+  theme: resolveTheme("tropical-elegance"),
   entitlements: getEntitlements("signature"),
 };
