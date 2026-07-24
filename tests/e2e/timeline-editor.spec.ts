@@ -11,6 +11,8 @@ test("Bespoke timeline saves structured moments and Timeless events use formal f
   test.skip(!supabaseUrl?.startsWith("http://127.0.0.1") || !serviceKey || !email || !password, "Local Supabase and demo administrator credentials are required.");
   const admin = createClient(supabaseUrl!, serviceKey!, { auth: { persistSession: false } });
   const weddingId = randomUUID();
+  const musicId = randomUUID();
+  const textureId = randomUUID();
   const slug = `timeline-test-${weddingId.slice(0, 8)}`;
   try {
     const { error: weddingError } = await admin.from("weddings").insert({ id: weddingId, partner_one_name: "Maya", partner_two_name: "Noah", display_names: "Maya & Noah", slug, package: "bespoke", status: "draft", wedding_at: "2027-05-22T20:00:00.000Z", timezone: "America/Jamaica" });
@@ -22,14 +24,20 @@ test("Bespoke timeline saves structured moments and Timeless events use formal f
       { wedding_id: weddingId, section_key: "welcome", enabled: true, position: 2 },
       { wedding_id: weddingId, section_key: "ceremony", enabled: true, position: 3 },
       { wedding_id: weddingId, section_key: "reception", enabled: true, position: 4 },
-      { wedding_id: weddingId, section_key: "timeline", enabled: true, position: 5 },
-      { wedding_id: weddingId, section_key: "dress_code", enabled: true, position: 6 },
-      { wedding_id: weddingId, section_key: "contact", enabled: true, position: 7 },
-      { wedding_id: weddingId, section_key: "closing", enabled: true, position: 8 },
+      { wedding_id: weddingId, section_key: "schedule", enabled: true, position: 5 },
+      { wedding_id: weddingId, section_key: "timeline", enabled: true, position: 6 },
+      { wedding_id: weddingId, section_key: "menu", enabled: true, position: 7 },
+      { wedding_id: weddingId, section_key: "dress_code", enabled: true, position: 8 },
+      { wedding_id: weddingId, section_key: "contact", enabled: true, position: 9 },
+      { wedding_id: weddingId, section_key: "closing", enabled: true, position: 10 },
     ])).error).toBeNull();
     expect((await admin.from("wedding_events").insert([
       { wedding_id: weddingId, event_type: "ceremony", venue_name: "Norse Hill", address: "Norse Hill Estate", parish: "Saint Andrew", starts_at: "2027-05-22T20:00:00.000Z", maps_url: "https://maps.google.com" },
       { wedding_id: weddingId, event_type: "reception", venue_name: "Hope Garden", address: "Hope Gardens", parish: "Saint Andrew", starts_at: "2027-05-22T22:00:00.000Z", maps_url: "https://maps.google.com" },
+    ])).error).toBeNull();
+    expect((await admin.from("wedding_media").insert([
+      { id: musicId, wedding_id: weddingId, purpose: "music", storage_path: `${weddingId}/${musicId}.mp3`, mime_type: "audio/mpeg", byte_size: 1024, duration_seconds: 90, alt_text: "Wedding music" },
+      { id: textureId, wedding_id: weddingId, purpose: "texture", storage_path: `${weddingId}/${textureId}.png`, mime_type: "image/png", byte_size: 1024, width: 320, height: 320, alt_text: "Warm paper texture" },
     ])).error).toBeNull();
 
     await page.goto(`/login?next=/admin/weddings/${weddingId}/edit/content`);
@@ -45,6 +53,8 @@ test("Bespoke timeline saves structured moments and Timeless events use formal f
     await page.getByLabel("Wedding hashtag").fill("#MayaAndNoah");
     await page.getByLabel("Dress code", { exact: true }).fill("Garden formal");
     await page.getByLabel("Contact information").fill("Call our wedding coordinator at 555-0100.");
+    await page.locator('[name="scheduleItems"]').fill("10:00 | Opening ceremony | Garden\n12:00 | Vows | Center stage");
+    await page.locator('[name="menuItems"]').fill("Main | Jerk chicken | Coconut rice\nAppetizer | Codfish fritters | Plantain chips\nSoup | Pumpkin soup | Hardo bread\nDrink | Sorrel tea | Ginger beer\nDessert | Rum cake | Mango ice cream");
     await page.getByRole("button", { name: "Save & continue" }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/weddings/${weddingId}/edit/design`));
 
@@ -72,6 +82,45 @@ test("Bespoke timeline saves structured moments and Timeless events use formal f
       expect(Math.abs((sectionBox!.x + sectionBox!.width / 2) - (headingBox!.x + headingBox!.width / 2))).toBeLessThanOrEqual(2);
     }
     await expect(page.locator(".timeless-page")).toHaveCSS("background-image", "none");
+    await expect(page.locator("#hero")).toHaveCSS("border-bottom-style", "none");
+    await expect(page.locator(".wedding-site")).toHaveClass(/has-texture/);
+    await expect(page.locator("#welcome")).toHaveCSS("background-image", new RegExp(`/api/media/${textureId}`));
+    await expect(page.locator("#hero")).not.toHaveCSS("background-image", new RegExp(textureId));
+    const frameBox = await page.locator(".timeless-frame").boundingBox();
+    const monogramBox = await page.locator(".timeless-hero-monogram").boundingBox();
+    expect(monogramBox!.x + monogramBox!.width).toBeLessThan(frameBox!.x + frameBox!.width - 8);
+    expect(monogramBox!.y).toBeGreaterThan(frameBox!.y + 8);
+    const scheduleBox = await page.locator("#schedule .schedule-list").boundingBox();
+    const scheduleRows = page.locator("#schedule .schedule-row");
+    await expect(scheduleRows).toHaveCount(2);
+    const firstScheduleBox = await scheduleRows.nth(0).boundingBox();
+    const secondScheduleBox = await scheduleRows.nth(1).boundingBox();
+    expect(Math.abs(firstScheduleBox!.width - secondScheduleBox!.width)).toBeLessThanOrEqual(2);
+    expect(Math.abs((secondScheduleBox!.x + secondScheduleBox!.width) - (scheduleBox!.x + scheduleBox!.width))).toBeLessThanOrEqual(2);
+    const menuBox = await page.locator("#menu .menu-list").boundingBox();
+    const menuItems = page.locator("#menu .menu-list article");
+    await expect(menuItems).toHaveCount(5);
+    const lastMenuBox = await menuItems.last().boundingBox();
+    expect(Math.abs(lastMenuBox!.width - menuBox!.width)).toBeLessThanOrEqual(2);
+
+    const controls = page.locator(".audio-controls");
+    await expect(controls).toBeVisible();
+    await expect(controls.getByLabel("Music volume", { exact: true })).toHaveCount(0);
+    await controls.getByRole("button", { name: "Adjust music volume" }).click();
+    const desktopVolume = await controls.getByLabel("Music volume", { exact: true }).boundingBox();
+    expect(desktopVolume!.width).toBeGreaterThan(desktopVolume!.height);
+    await controls.getByRole("button", { name: "Adjust music volume" }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await expect(page.locator(".timeless-hero-monogram")).toBeHidden();
+    const mobileControls = await controls.boundingBox();
+    expect(mobileControls!.height).toBeLessThan(70);
+    await controls.getByRole("button", { name: "Adjust music volume" }).click();
+    const openMobileVolume = await controls.getByLabel("Music volume", { exact: true }).boundingBox();
+    expect(mobileControls!.width).toBeLessThan(120);
+    expect(openMobileVolume!.height).toBeGreaterThan(openMobileVolume!.width);
+    await controls.getByLabel("Music volume", { exact: true }).fill("0");
+    await expect(controls.getByRole("button", { name: "Adjust music volume (muted)" })).toBeVisible();
+    expect(await page.locator("audio").evaluate((audio: HTMLAudioElement) => audio.muted)).toBe(true);
     await page.screenshot({ path: testInfo.outputPath("timeless-events-and-timeline.png"), fullPage: true });
   } finally {
     await admin.from("weddings").delete().eq("id", weddingId);

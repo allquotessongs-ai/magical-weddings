@@ -55,14 +55,15 @@ export function MediaUploader({ weddingId, purpose, title, accept }: { weddingId
     <div><strong>{title}</strong><p className="muted">{purpose === "music" ? "MP3, M4A or OGG · up to 15 MB" : "JPEG, PNG, WebP or AVIF · up to 12 MB"}</p></div>
     <input ref={input} className="sr-only" type="file" accept={accept} onChange={(event) => event.target.files?.[0] && choose(event.target.files[0])}/>
     <Button type="button" variant="outline" disabled={state === "uploading"} onClick={() => input.current?.click()}><UploadCloud size={16}/>{state === "uploading" ? "Uploading…" : "Choose file"}</Button>
+    {purpose === "texture" && <p className="texture-upload-help">Applied as a subtle repeating overlay behind text-based sections. It never covers the couple&apos;s photographs.</p>}
     {message && <p className="form-message" aria-live="polite">{message}</p>}
     {selected && previewUrl && <div className="media-adjuster-backdrop" role="presentation">
       <section className="media-adjuster" role="dialog" aria-modal="true" aria-labelledby={`adjust-${purpose}`}>
         <div className="media-adjuster-heading"><div><p className="eyebrow">Position before upload</p><h2 id={`adjust-${purpose}`}>Adjust {title.toLowerCase()}</h2></div><button type="button" aria-label="Cancel upload" onClick={clearSelection}><X/></button></div>
         <div className="media-adjuster-preview"><Image src={previewUrl} alt="Upload crop preview" fill sizes="(max-width: 780px) 100vw, 780px" style={{ objectPosition: `${focalX}% ${focalY}%` }} unoptimized/><span className="focal-marker" style={{ left: `${focalX}%`, top: `${focalY}%` }} aria-hidden="true"/></div>
-        <p className="muted">Move the sliders until faces are comfortably inside the frame. The original file is retained; this controls how the site positions it.</p>
-        <div className="media-adjuster-controls"><label>Horizontal position <input type="range" min="0" max="100" value={focalX} onChange={(event)=>setFocalX(Number(event.target.value))}/></label><label>Vertical position <input type="range" min="0" max="100" value={focalY} onChange={(event)=>setFocalY(Number(event.target.value))}/></label></div>
-        <label className="field"><span>Image description for screen readers</span><input value={altText} maxLength={240} onChange={(event)=>setAltText(event.target.value)} placeholder="Describe the couple and setting"/></label>
+        <p className="muted">{purpose === "texture" ? "The complete image will repeat softly behind text-based sections. It will not cover the hero, gallery, or other photographs." : "Move the sliders until faces are comfortably inside the frame. The original file is retained; this controls how the site positions it."}</p>
+        {purpose !== "texture" && <div className="media-adjuster-controls"><label>Horizontal position <input type="range" min="0" max="100" value={focalX} onChange={(event)=>setFocalX(Number(event.target.value))}/></label><label>Vertical position <input type="range" min="0" max="100" value={focalY} onChange={(event)=>setFocalY(Number(event.target.value))}/></label></div>}
+        <label className="field"><span>Image description for screen readers</span><input value={altText} maxLength={240} onChange={(event)=>setAltText(event.target.value)} placeholder={purpose === "texture" ? "Describe the colours and pattern" : "Describe the couple and setting"}/></label>
         <div className="media-adjuster-actions"><Button type="button" variant="outline" onClick={clearSelection}>Cancel</Button><Button type="button" disabled={state === "uploading" || !altText.trim()} onClick={()=>upload(selected,altText,focalX,focalY)}>{state === "uploading" ? "Uploading…" : "Confirm upload"}</Button></div>
       </section>
     </div>}

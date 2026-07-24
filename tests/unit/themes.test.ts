@@ -10,8 +10,10 @@ import { themeSettingsSchema } from "@/lib/validation/wedding";
 const props: ThemePageProps = { wedding: demoWedding, sections: demoWedding.sections, countdown: { days: 1, hours: 2, minutes: 3, seconds: 4 }, shareText: "invited" };
 
 describe("theme registry", () => {
-  it("contains four stable themes and uses Timeless Romance as its fallback", () => {
+  it("contains six stable themes and uses Timeless Romance as its fallback", () => {
     expect(themeDefinitions.map((theme) => theme.id)).toEqual(THEME_IDS);
+    expect(getThemeDefinition("amaze-me").label).toBe("AMAZE ME");
+    expect(getThemeDefinition("ivory-estate").label).toBe("Ivory Estate");
     expect(getThemeDefinition("not-a-theme").id).toBe(FALLBACK_THEME_ID);
   });
 
@@ -39,7 +41,7 @@ describe("theme registry", () => {
       return renderToStaticMarkup(React.createElement(Component, { ...props, wedding }));
     });
     THEME_IDS.forEach((id, index) => expect(markup[index]).toContain(`data-theme-renderer="${id}"`));
-    expect(new Set(markup).size).toBe(4);
+    expect(new Set(markup).size).toBe(6);
     expect(demoWedding.content.coupleStory).toBe(props.wedding.content.coupleStory);
   });
 

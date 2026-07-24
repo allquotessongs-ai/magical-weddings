@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { WeddingSite } from "@/features/weddings/types";
 
-export const THEME_IDS = ["timeless-romance", "tropical-elegance", "modern-minimal", "enchanted-garden"] as const;
+export const THEME_IDS = ["timeless-romance", "tropical-elegance", "modern-minimal", "enchanted-garden", "amaze-me", "ivory-estate"] as const;
 export type ThemeId = (typeof THEME_IDS)[number];
 
 export const HEADING_FONTS = ["Cormorant Garamond", "Playfair Display", "DM Serif Display", "Manrope"] as const;

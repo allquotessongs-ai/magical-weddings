@@ -18,6 +18,18 @@ const selectOptions = {
   sectionSpacing: ["compact", "balanced", "airy"], motion: ["none", "subtle", "expressive"], imageTreatment: ["natural", "editorial", "layered", "dreamy"], decoration: ["none", "fine-lines", "botanical", "geometric", "floral"],
 } satisfies Partial<Record<keyof ThemeTokens, readonly string[]>>;
 
+const controlHelp: Partial<Record<keyof ThemeTokens, Record<string, string>>> = {
+  buttonStyle: {
+    solid: "Filled, tailored buttons with compact corners.", outline: "Transparent buttons with a fine border.", pill: "Filled buttons with fully rounded ends.",
+  },
+  imageTreatment: {
+    natural: "Original colour and a clean finish.", editorial: "Crisper contrast with a restrained, magazine-style grade.", layered: "Richer colour with offset frames and added depth.", dreamy: "Softer contrast, gentle colour and a subtle glow.",
+  },
+  motion: {
+    none: "No decorative movement.", subtle: "Short, restrained fades and lifts.", expressive: "More noticeable reveals and image movement. Reduced-motion preferences are always respected.",
+  },
+};
+
 export function ThemeEditor({ wedding, saved }: { wedding: WeddingSite; saved?: boolean }) {
   const [previewId, setPreviewId] = useState<ThemeId>(wedding.theme.id);
   const [drafts, setDrafts] = useState<ThemeOverrideMap>(() => structuredClone(wedding.theme.overrides));
@@ -39,13 +51,13 @@ export function ThemeEditor({ wedding, saved }: { wedding: WeddingSite; saved?: 
       <form action={saveDesign} className="theme-controls">
         <input type="hidden" name="weddingId" value={wedding.id} /><input type="hidden" name="themeId" value={previewId} />
         <div className="theme-control-heading"><div><p className="eyebrow">Customize</p><h2>{theme.label}</h2></div><button type="button" className="reset-theme" onClick={reset} disabled={!canCustomize}><RotateCcw />Reset defaults</button></div>
-        {!canCustomize && <p className="entitlement-note">Essential includes all four curated themes. Custom controls unlock with Signature or Bespoke.</p>}
+        {!canCustomize && <p className="entitlement-note">Essential includes all six curated themes. Custom controls unlock with Signature or Bespoke.</p>}
         <div className="theme-colours">
           {(["primary", "secondary", "accent", "background", "text"] as const).map((key) => <label className="theme-colour" key={key}><span>{label(key)}</span><input type="color" name={key} value={theme[key]} disabled={!canCustomize} onChange={(event) => change(key, event.target.value)} />{!canCustomize && <input type="hidden" name={key} value={theme[key]} />}<code>{theme[key]}</code></label>)}
         </div>
         {contrastError && <p className="alert error">{contrastError}</p>}
         <div className="theme-selects">
-          {(Object.keys(selectOptions) as Array<keyof typeof selectOptions>).map((key) => <label className="field" key={key}><span>{label(key)}</span><select name={key} value={String(theme[key])} disabled={!canCustomize} onChange={(event) => change(key, event.target.value as never)}>{selectOptions[key].map((option) => <option key={option} value={option}>{label(option)}</option>)}</select>{!canCustomize && <input type="hidden" name={key} value={String(theme[key])} />}</label>)}
+          {(Object.keys(selectOptions) as Array<keyof typeof selectOptions>).map((key) => { const value = String(theme[key]); const help = controlHelp[key]?.[value]; return <label className="field" key={key}><span>{label(key)}</span><select name={key} value={value} disabled={!canCustomize} onChange={(event) => change(key, event.target.value as never)}>{selectOptions[key].map((option) => <option key={option} value={option}>{label(option)}</option>)}</select>{help && <small className="theme-control-help">{help}</small>}{!canCustomize && <input type="hidden" name={key} value={value} />}</label>; })}
         </div>
         <div className="theme-editor-actions"><Button type="submit" disabled={Boolean(contrastError)}>Apply & save theme</Button><Link className={buttonClass({ variant: "outline" })} href={`/admin/weddings/${wedding.id}/edit/media`}>Continue to media</Link></div>
       </form>

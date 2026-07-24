@@ -50,6 +50,14 @@ const themes: Record<ThemeId, ThemeDefinition> = {
     id: "enchanted-garden", label: "Enchanted Garden", description: "Dreamy garden arches, florals and storybook movement.",
     defaults: { primary: "#34513f", secondary: "#fbf5f0", accent: "#9b5c72", background: "#f7efe9", text: "#2d4436", headingFont: "Playfair Display", bodyFont: "Lora", decorativeFont: "Cormorant Garamond", radius: "round", shadow: "soft", sectionSpacing: "airy", motion: "expressive", imageTreatment: "dreamy", backgroundStyle: "soft", buttonStyle: "pill", decoration: "floral" },
   },
+  "amaze-me": {
+    id: "amaze-me", label: "AMAZE ME", description: "Cinematic midnight glamour, celestial light and couture-level drama.",
+    defaults: { primary: "#21142f", secondary: "#fff8ef", accent: "#c99855", background: "#f7efe9", text: "#2a1733", headingFont: "Playfair Display", bodyFont: "Manrope", decorativeFont: "Cormorant Garamond", radius: "round", shadow: "dramatic", sectionSpacing: "airy", motion: "expressive", imageTreatment: "dreamy", backgroundStyle: "soft", buttonStyle: "pill", decoration: "geometric" },
+  },
+  "ivory-estate": {
+    id: "ivory-estate", label: "Ivory Estate", description: "Airy estate romance, champagne details and botanical refinement.",
+    defaults: { primary: "#6f7d68", secondary: "#fffdf8", accent: "#bd9850", background: "#f4efe7", text: "#30332f", headingFont: "Playfair Display", bodyFont: "Manrope", decorativeFont: "Cormorant Garamond", radius: "soft", shadow: "soft", sectionSpacing: "balanced", motion: "subtle", imageTreatment: "natural", backgroundStyle: "paper", buttonStyle: "solid", decoration: "botanical" },
+  },
 };
 
 export const FALLBACK_THEME_ID: ThemeId = "timeless-romance";
